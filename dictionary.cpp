@@ -7,6 +7,11 @@
 using namespace std;
 
 const string badchars = "!@#$%^&*()<>,.?/:;\"[]{}\\|_=+`~";
+const string badchars_standalone = "-'";
+
+void error(string s) {
+	throw runtime_error(s);
+}
 
 bool isbadchar(char c) {
 	for (const char& badc : badchars) {
@@ -14,11 +19,14 @@ bool isbadchar(char c) {
 	}
 	return false;
 }
-void error(string s) {
-	throw runtime_error(s);
+
+bool isbadstr(string s) {
+	for (const char& badc : badchars_standalone) {
+		if (s == string(1, badc)) {return true;}
+	}
+	return false;
 }
 
-// Replace any bad chars in s with whitespace
 void remove_badchars(string& s) {
 	for (char& c : s) {
 		if (isbadchar(c)) {
@@ -27,9 +35,42 @@ void remove_badchars(string& s) {
 	}
 }
 
+void tolower(string& s) {
+	for (char& c : s) {
+		c = tolower(c);
+	}
+}
+
+// Populate vector words with every word from input file source
+// Ignore bad characters and words
+void populate(vector<string>& words, ifstream& source) {
+	for (string line; getline(source, line);) {
+		remove_badchars(line);
+		istringstream iss {line};
+		for (string word; iss >> word;) {
+			tolower(word);
+			if (!isbadstr(word)) {
+				words.push_back(word);
+			}
+		}
+	}
+}
+
+// Write out words vector
+// Sort and remove duplicates when writing to create dictionary
+void write_dict(vector<string>& words, ofstream& dict) {
+	sort(words.begin(), words.end());
+	for (int i; i < words.size(); ++i) {
+		if (i == 0 || words[i] != words[i-1]) {
+			dict << words[i] << endl;
+		}
+	}
+}
+
 int main() 
 try {
 
+	// File handling
 	cout << "Enter a file name.\n";
 	string fname;
 	cin >> fname;
@@ -37,21 +78,10 @@ try {
 	if (!source) {error("Bad filename.");}
 	ofstream dict {"dictionary.txt"};
 
+	// Input
 	vector<string> words;
-	for (string line; getline(source, line);) {
-		remove_badchars(line);
-		istringstream iss {line};
-		for (string word; iss >> word;) {
-			words.push_back(word);
-		}
-	}
-
-	sort(words.begin(), words.end());
-	for (int i; i < words.size(); ++i) {
-		if (i == 0 || words[i] != words[i-1]) {
-			dict << words[i] << endl;
-		}
-	}
+	populate(words, source);
+	write_dict(words, dict);
 
 	return 0;
 }
